@@ -1,53 +1,139 @@
 "use client";
 import React, { useState } from 'react';
 import Link from "next/link";
+import axios, { AxiosResponse } from 'axios';
+import { FieldValues, set, useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const Page = () => {
     const [step, setStep] = useState(1);
     const [showPassword, setShowPassword] = useState(false);
+    const [userId, setUserId] = useState<number | null>(null);
+    const [certificate, setCertificate] = useState<File | null>(null);
+    const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
     const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        userName: '',
-        email: '',
-        password: '',
-        role: '',
-        certificate: '',
-        bio: '',
-        proficiencies: [] as string[],
-        profilePhoto: ''
+        role: ''
     });
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.id]: e.target.value
-        });
-    };
+    const { register, handleSubmit, formState: { errors } } = useForm();
+    const router = useRouter();
 
-    const handleRoleSelect = (role: string) => {
-        setFormData({
-            ...formData,
-            role: role
-        });
-    };
+    interface firstStep {
+        firstName: string,
+        lastName: string,
+        userName: string,
+        email: string,
+        password: string,
+        role: string
+    }
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'certificate' | 'profilePhoto') => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];//send
-            setFormData({
-                ...formData,
-                [type]: file
-            });
+    interface secondStep {
+        bio: string,
+        proficiencies: string[]
+    }
+
+    const onPictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            if (step === 2) {
+                setCertificate(e.target.files[0]);
+            } else if (step === 3) {
+                setProfilePhoto(e.target.files[0]);
+            }
         }
     };
 
-    const nextStep = () => {
-        console.log('Current form data:', formData);
-        if (step === 1 && formData.role === 'USER') {
-            setStep(3);
-        } else {
-            setStep((prev) => prev + 1);
+    const onSubmit = async (data: FieldValues) => {
+        console.log('data:', data);
+        const base_url = "http://localhost:8080";
+        if (step === 1) {
+            const { firstName, lastName, userName, email, password, role } = data as firstStep;
+
+            setFormData({
+                ...formData,
+                role: role
+            });
+
+            const response = await axios.post(`${base_url}/auth/register`, {
+                firstName,
+                lastName,
+                userName,
+                email,
+                password,
+                role
+            });
+
+            if (response && response.data.success) {
+                setUserId(response.data.userId);
+                toast.success(response.data.message);
+                setStep(2);
+            } else {
+                toast.error(response?.data?.message || 'An error occurred');
+            }
+        } else if (step === 2) {
+            const { bio, proficiencies } = data as secondStep;
+            if (!certificate) {
+                toast.error('Please upload a certificate file.');
+                return;
+            }
+
+            const obj: any = {
+                userId: userId,
+                bio: bio,
+                proficiencies: proficiencies
+            }
+
+            console.log('obj:', obj);
+            console.log(`{"userId": ${userId}, "bio": "${bio}", "proficiencies": [${JSON.stringify(proficiencies)}]}`);
+
+            const formData = new FormData();
+            formData.append('certificate', certificate);
+            formData.append(
+                'doctorRegistrationBody',
+                `{"userId": ${userId}, "bio": "${bio}", "proficiencies": [${JSON.stringify(proficiencies)}]}`
+            );
+
+            try {
+                const response = await axios.post(`${base_url}/auth/register/doctor`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+                if (response.status === 200) {
+                    setUserId(response.data.userId);
+                    toast.success('Doctor registered successfully!');
+                    setStep(3);
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error('An error occurred while submitting the form.');
+            }
+        }
+        else if (step === 3) {
+            const formData = new FormData();
+            if (!profilePhoto) {
+                toast.error('Please upload a Profile Photo file.');
+                return;
+            }
+            formData.append('profilePhoto', profilePhoto);
+            try {
+                const response = await axios.post(`${base_url}/auth/upload-profile-photo/${userId}`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+
+                if (response && response.status === 200) {
+                    toast.success("Profile photo uploaded successfully!");
+                    router.replace('/login');
+                } else {
+                    console.error(response);
+                    toast.error('An error occurred');
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error('An error occurred while submitting the form.');
+            }
         }
     };
 
@@ -110,7 +196,7 @@ const Page = () => {
                             </div>
 
                             {step === 1 && (
-                                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); nextStep(); }}>
+                                <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -119,11 +205,17 @@ const Page = () => {
                                             <input
                                                 type="text"
                                                 id="firstName"
-                                                value={formData.firstName}
-                                                onChange={handleInputChange}
                                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                required
+
+                                                {
+                                                ...register('firstName', {
+                                                    required: 'First Name is required'
+                                                })
+                                                }
                                             />
+                                            {
+                                                errors.firstName && <p className="text-red-500 text-sm">{String(errors.firstName.message)}</p>
+                                            }
                                         </div>
                                         <div>
                                             <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -132,11 +224,17 @@ const Page = () => {
                                             <input
                                                 type="text"
                                                 id="lastName"
-                                                value={formData.lastName}
-                                                onChange={handleInputChange}
                                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 required
+                                                {
+                                                ...register('lastName', {
+                                                    required: 'Last Name is required'
+                                                })
+                                                }
                                             />
+                                            {
+                                                errors.lastName && <p className="text-red-500 text-sm">{String(errors.lastName.message)}</p>
+                                            }
                                         </div>
                                     </div>
 
@@ -148,11 +246,17 @@ const Page = () => {
                                             <input
                                                 type="text"
                                                 id="userName"
-                                                value={formData.userName}
-                                                onChange={handleInputChange}
                                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 required
+                                                {
+                                                ...register('userName', {
+                                                    required: 'Username is required'
+                                                })
+                                                }
                                             />
+                                            {
+                                                errors.userName && <p className="text-red-500 text-sm">{String(errors.userName.message)}</p>
+                                            }
                                         </div>
                                         <div>
                                             <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
@@ -160,10 +264,13 @@ const Page = () => {
                                             </label>
                                             <select
                                                 id="role"
-                                                value={formData.role}
-                                                onChange={(e) => handleRoleSelect(e.target.value)}
                                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 required
+                                                {
+                                                ...register('role', {
+                                                    required: 'Role is required'
+                                                })
+                                                }
                                             >
                                                 <option value="">Select Role</option>
                                                 <option value="DOCTOR">Doctor</option>
@@ -179,12 +286,21 @@ const Page = () => {
                                         <input
                                             type="email"
                                             id="email"
-                                            value={formData.email}
-                                            onChange={handleInputChange}
                                             className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             placeholder="you@example.com"
                                             required
+                                            {
+                                            ...register('email', {
+                                                pattern: {
+                                                    value: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
+                                                    message: 'Invalid email address'
+                                                }
+                                            })
+                                            }
                                         />
+                                        {
+                                            errors.email && <p className="text-red-500 text-sm">{String(errors.email.message)}</p>
+                                        }
                                     </div>
 
                                     <div>
@@ -195,10 +311,21 @@ const Page = () => {
                                             <input
                                                 type={showPassword ? "text" : "password"}
                                                 id="password"
-                                                value={formData.password}
-                                                onChange={handleInputChange}
                                                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 required
+                                                {
+                                                ...register('password', {
+                                                    required: 'Password is required',
+                                                    minLength: {
+                                                        value: 8,
+                                                        message: 'Password must be at least 8 characters'
+                                                    },
+                                                    pattern: {
+                                                        value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/,
+                                                        message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+                                                    }
+                                                })
+                                                }
                                             />
                                             <button
                                                 type="button"
@@ -220,7 +347,7 @@ const Page = () => {
                             )}
 
                             {step === 2 && (
-                                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); nextStep(); }}>
+                                <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
                                     <div>
                                         <label htmlFor="certificate" className="block text-sm font-medium text-gray-700 mb-1">
                                             Upload Certificate
@@ -229,9 +356,9 @@ const Page = () => {
                                             type="file"
                                             id="certificate"
                                             accept=".pdf,.jpg,.jpeg,.png"
-                                            onChange={(e) => handleImageUpload(e, 'certificate')}
                                             className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             required
+                                            onChange={onPictureChange}
                                         />
                                     </div>
 
@@ -241,11 +368,18 @@ const Page = () => {
                                         </label>
                                         <textarea
                                             id="bio"
-                                            value={formData.bio}
-                                            onChange={handleInputChange}
                                             className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             rows={4}
                                             required
+                                            {
+                                            ...register('bio', {
+                                                required: 'Bio is required',
+                                                maxLength: {
+                                                    value: 500,
+                                                    message: 'Bio must not exceed 500 characters'
+                                                }
+                                            })
+                                            }
                                         />
                                     </div>
 
@@ -256,16 +390,24 @@ const Page = () => {
                                         <input
                                             type="text"
                                             id="proficiencies"
-                                            onChange={(e) => {
-                                                const proficienciesArray = e.target.value.split(',').map(el => el.trim());
-                                                setFormData({
-                                                    ...formData,
-                                                    proficiencies: proficienciesArray
-                                                });
-                                            }}
+                                            // onChange={(e) => {
+                                            //     const proficienciesArray = e.target.value.split(',').map(el => el.trim());
+                                            //     setFormData({
+                                            //         ...formData,
+                                            //         proficiencies: proficienciesArray
+                                            //     });
+                                            // }}
                                             className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             placeholder="e.g. Cardiology, Pediatrics, Surgery"
                                             required
+                                            {
+                                            ...register('proficiencies', {
+                                                required: 'Proficiencies are required',
+                                                validate: {
+                                                    format: (value) => value.split(',').length > 0 || 'Proficiencies must be comma-separated'
+                                                }
+                                            })
+                                            }
                                         />
                                     </div>
 
@@ -288,7 +430,7 @@ const Page = () => {
                             )}
 
                             {step === 3 && (
-                                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); console.log('Final form data:', formData); }}>
+                                <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
                                     <div>
                                         <label htmlFor="profilePhoto" className="block text-sm font-medium text-gray-700 mb-1">
                                             Profile Photo
@@ -297,9 +439,9 @@ const Page = () => {
                                             type="file"
                                             id="profilePhoto"
                                             accept="image/*"
-                                            onChange={(e) => handleImageUpload(e, 'profilePhoto')}
                                             className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             required
+                                            onChange={onPictureChange}
                                         />
                                     </div>
 

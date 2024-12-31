@@ -2,10 +2,7 @@ package com.healthcare.healthcare.model;
 
 import com.healthcare.healthcare.eum.Resolution;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.Date;
 
@@ -46,78 +43,6 @@ public class Disputes {
 
     @Column(name = "created_at", nullable = false)
     private Date createdAt;
-
-    public Long getDisputeId() {
-        return disputeId;
-    }
-
-    public void setDisputeId(Long disputeId) {
-        this.disputeId = disputeId;
-    }
-
-    public Long getContractId() {
-        return contractId;
-    }
-
-    public void setContractId(Long contractId) {
-        this.contractId = contractId;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public String getReason() {
-        return reason;
-    }
-
-    public void setReason(String reason) {
-        this.reason = reason;
-    }
-
-    public String getEvidence() {
-        return evidence;
-    }
-
-    public void setEvidence(String evidence) {
-        this.evidence = evidence;
-    }
-
-    public Byte getResolvedByAdmin() {
-        return resolvedByAdmin;
-    }
-
-    public void setResolvedByAdmin(Byte resolvedByAdmin) {
-        this.resolvedByAdmin = resolvedByAdmin;
-    }
-
-    public Resolution getResolution() {
-        return resolution;
-    }
-
-    public void setResolution(Resolution resolution) {
-        this.resolution = resolution;
-    }
-
-    public String getResolutionComment() {
-        return resolutionComment;
-    }
-
-    public void setResolutionComment(String resolutionComment) {
-        this.resolutionComment = resolutionComment;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
 
     @PrePersist
     public void onCreate() {

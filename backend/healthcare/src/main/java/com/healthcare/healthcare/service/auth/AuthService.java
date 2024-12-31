@@ -15,6 +15,7 @@ import com.healthcare.healthcare.repo.DoctorRepository;
 import com.healthcare.healthcare.repo.ProficiencyRepository;
 import com.healthcare.healthcare.repo.UserRepository;
 import com.healthcare.healthcare.service.GeminiApiService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class AuthService {
 
     @Autowired
@@ -70,7 +72,7 @@ public class AuthService {
                 Optional<Users> user = userRepository.findByEmail(email);
 
                 if (user.isPresent()) {
-                    return new ResponseEntity<>(new LoginResponseDTO.Builder()
+                    return new ResponseEntity<LoginResponseDTO>(LoginResponseDTO.builder()
                             .token(loginRequestDTO.token)
                             .message("Login successful via token")
                             .userId(user.get().getUserId())
@@ -78,12 +80,12 @@ public class AuthService {
                             .success(true)
                             .build(), HttpStatus.OK);
                 }
-                return new ResponseEntity<>(new LoginResponseDTO.Builder()
+                return new ResponseEntity<LoginResponseDTO>(LoginResponseDTO.builder()
                         .message("Invalid token: User not found.")
                         .success(false)
                         .build(), HttpStatusCode.valueOf(401));
             }
-            return new ResponseEntity<>(new LoginResponseDTO.Builder()
+            return new ResponseEntity<LoginResponseDTO>(LoginResponseDTO.builder()
                     .message("Invalid or expired token.")
                     .success(false)
                     .build(), HttpStatusCode.valueOf(401));
@@ -97,16 +99,15 @@ public class AuthService {
 
                 String token = jwtTokenProvider.generateToken((UserDetails) authentication.getPrincipal());
 
-                return new ResponseEntity<>(new LoginResponseDTO.Builder()
+                return new ResponseEntity<LoginResponseDTO>(LoginResponseDTO.builder()
                         .token(token)
                         .message("Login successful")
                         .userId(user.get().getUserId())
                         .role(user.get().getRole().name())
                         .success(true)
                         .build(), HttpStatus.OK);
-            }
-            else {
-                return new ResponseEntity<>(new LoginResponseDTO.Builder()
+            } else {
+                return new ResponseEntity<LoginResponseDTO>(LoginResponseDTO.builder()
                         .message("Invalid Credentials")
                         .success(false)
                         .build(), HttpStatusCode.valueOf(401));
@@ -114,8 +115,18 @@ public class AuthService {
         }
     }
 
+
     public ResponseEntity<RegistrationResponseDTO> registerNormalUser(RegistrationRequestDTO request) {
         try {
+
+            if(userRepository.findByEmail(request.getEmail()).isPresent()) {
+                return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
+                        .builder()
+                        .success(false)
+                        .message("User Already registered!")
+                        .build(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
             Users user = Users.builder()
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
@@ -125,7 +136,7 @@ public class AuthService {
                     .role(request.getRole())
                     .build();
             userRepository.save(user);
-            return new ResponseEntity<>(RegistrationResponseDTO
+            return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
                     .builder()
                     .success(true)
                     .message("User Registration Started.")
@@ -133,7 +144,7 @@ public class AuthService {
                     .photoUploadUrl(photoUploadUrl)
                     .build(), HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(RegistrationResponseDTO
+            return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
                     .builder()
                     .success(false)
                     .message("User Registration failed. Internal Server Error!")
@@ -143,6 +154,15 @@ public class AuthService {
 
     public ResponseEntity<RegistrationResponseDTO> startDoctorRegistration(RegistrationRequestDTO request) {
         try {
+
+            if(userRepository.findByEmail(request.getEmail()).isPresent()) {
+                return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
+                        .builder()
+                        .success(false)
+                        .message("User Already registered!")
+                        .build(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
             Users user = Users.builder()
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
@@ -152,7 +172,7 @@ public class AuthService {
                     .role(request.getRole())
                     .build();
             userRepository.save(user);
-            return new ResponseEntity<>(RegistrationResponseDTO
+            return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
                     .builder()
                     .success(true)
                     .message("Doctor Registration Started.")
@@ -160,7 +180,7 @@ public class AuthService {
                     .doctorRegistrationUrl(doctorRegistrationRedirectionUrl)
                     .build(), HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(RegistrationResponseDTO
+            return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
                     .builder()
                     .success(false)
                     .message("Doctor Registration failed. Internal Server Error!")
@@ -173,11 +193,18 @@ public class AuthService {
             // Verify certificate with Gemini API
             boolean isVerified = geminiApiService.verifyCertificate(request.getCertificate());
             if (!isVerified) {
-                return new ResponseEntity<>(RegistrationResponseDTO
+                return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
                         .builder()
                         .success(false)
                         .message("Doctor Registration failed. Certificate Validation Error!")
                         .build(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            Optional<Users> user = userRepository.findById(request.getUserId());
+            if (user.isPresent()) {
+                Users doctor = user.get();
+                doctor.setBio(request.getBio());
+                userRepository.save(doctor);
             }
 
             // Save Doctor details
@@ -204,7 +231,7 @@ public class AuthService {
                 doctorProficiencyRepository.save(doctorProficiency);
             });
 
-            return new ResponseEntity<>(RegistrationResponseDTO
+            return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
                     .builder()
                     .success(true)
                     .message("Doctor Registration Success.")
@@ -212,7 +239,7 @@ public class AuthService {
                     .photoUploadUrl(photoUploadUrl)
                     .build(), HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(RegistrationResponseDTO
+            return new ResponseEntity<RegistrationResponseDTO>(RegistrationResponseDTO
                     .builder()
                     .success(false)
                     .message(e.getLocalizedMessage())

@@ -2,9 +2,7 @@ package com.healthcare.healthcare.model;
 
 import com.healthcare.healthcare.eum.RequestStatus;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 
 import java.util.Date;
 
@@ -13,6 +11,7 @@ import java.util.Date;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Request {
 
     @Id
@@ -38,62 +37,6 @@ public class Request {
 
     @Column(nullable = false, updatable = false, name = "created_at")
     private Date createdAt;
-
-    public Long getRequestId() {
-        return requestId;
-    }
-
-    public void setRequestId(Long requestId) {
-        this.requestId = requestId;
-    }
-
-    public Long getPatientID() {
-        return patientID;
-    }
-
-    public void setPatientID(Long patientID) {
-        this.patientID = patientID;
-    }
-
-    public Long getDoctorID() {
-        return doctorID;
-    }
-
-    public void setDoctorID(Long doctorID) {
-        this.doctorID = doctorID;
-    }
-
-    public Long getProficiencyID() {
-        return proficiencyID;
-    }
-
-    public void setProficiencyID(Long proficiencyID) {
-        this.proficiencyID = proficiencyID;
-    }
-
-    public String getRequirements() {
-        return requirements;
-    }
-
-    public void setRequirements(String requirements) {
-        this.requirements = requirements;
-    }
-
-    public RequestStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(RequestStatus status) {
-        this.status = status;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
 
     @PrePersist
     protected void onCreate() {

@@ -1,10 +1,7 @@
 package com.healthcare.healthcare.model;
 
 import com.healthcare.healthcare.eum.Status;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -44,70 +41,6 @@ public class MeetingContracts {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Date createdAt;
-
-    public Long getContractId() {
-        return contractId;
-    }
-
-    public void setContractId(Long contractId) {
-        this.contractId = contractId;
-    }
-
-    public Long getRequestId() {
-        return requestId;
-    }
-
-    public void setRequestId(Long requestId) {
-        this.requestId = requestId;
-    }
-
-    public BigDecimal getPaymentAmount() {
-        return paymentAmount;
-    }
-
-    public void setPaymentAmount(BigDecimal paymentAmount) {
-        this.paymentAmount = paymentAmount;
-    }
-
-    public String getMeetingDetails() {
-        return meetingDetails;
-    }
-
-    public void setMeetingDetails(String meetingDetails) {
-        this.meetingDetails = meetingDetails;
-    }
-
-    public Status getStatus() {
-        return status;
-    }
-
-    public void setStatus(Status status) {
-        this.status = status;
-    }
-
-    public Boolean getCompletedByPatient() {
-        return completedByPatient;
-    }
-
-    public void setCompletedByPatient(Boolean completedByPatient) {
-        this.completedByPatient = completedByPatient;
-    }
-
-    public Byte getCompletedByDoctor() {
-        return completedByDoctor;
-    }
-
-    public void setCompletedByDoctor(Byte completedByDoctor) {
-        this.completedByDoctor = completedByDoctor;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
 
     @PrePersist
     protected void onCreate() {

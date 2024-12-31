@@ -1,18 +1,16 @@
 package com.healthcare.healthcare.dto.request;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.healthcare.healthcare.validation.ValidDoctorRegistrationRequest;
+import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-
-import org.springframework.web.multipart.MultipartFile;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ValidDoctorRegistrationRequest
 public class DoctorRegistrationRequestDTO {
     private Long userId;
     private MultipartFile certificate;

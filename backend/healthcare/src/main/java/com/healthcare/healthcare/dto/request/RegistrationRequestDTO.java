@@ -1,15 +1,14 @@
 package com.healthcare.healthcare.dto.request;
 
 import com.healthcare.healthcare.eum.Role;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.healthcare.healthcare.validation.ValidRegistrationRequest;
+import lombok.*;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ValidRegistrationRequest
 public class RegistrationRequestDTO {
     private String firstName;
     private String lastName;
